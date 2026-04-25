@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getLeads, createLead } from "@/services/leadService";
 import { getRequestUser, applyRateLimit, ok, err } from "@/lib/apiHelpers";
 import { sendNewLeadEmail } from "@/services/emailService";
+import { emitNewLead } from "@/lib/socketEmitter";
 import { ILead } from "@/types";
 
 const CreateLeadSchema = z.object({
@@ -57,8 +58,9 @@ export async function POST(req: NextRequest) {
       createdByRole: user.role,
     });
 
-    // Fire-and-forget email to admin
+    // Fire-and-forget: email + socket notification
     sendNewLeadEmail(lead as unknown as ILead, process.env.EMAIL_USER ?? "").catch(() => null);
+    emitNewLead(lead);
 
     return ok(lead, 201);
   } catch (e) {

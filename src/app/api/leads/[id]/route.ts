@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getLeadById, updateLead, deleteLead } from "@/services/leadService";
 import { getRequestUser, applyRateLimit, ok, err } from "@/lib/apiHelpers";
 import { sendLeadAssignedEmail } from "@/services/emailService";
+import { emitLeadAssigned, emitStatusUpdate } from "@/lib/socketEmitter";
 import { ILead, IUser } from "@/types";
 
 const UpdateLeadSchema = z.object({
@@ -57,12 +58,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       previousAssignedTo: previousAssignedTo as string | null,
     });
 
-    // Email agent if assignment changed
+    // Email + socket on assignment change
     if (parsed.data.assignedTo && parsed.data.assignedTo !== previousAssignedTo) {
       const lead = updated as unknown as { assignedTo?: IUser };
       if (lead.assignedTo && typeof lead.assignedTo === "object") {
         sendLeadAssignedEmail(updated as unknown as ILead, lead.assignedTo).catch(() => null);
+        emitLeadAssigned(parsed.data.assignedTo, updated);
       }
+    }
+
+    // Socket on status change
+    if (parsed.data.status && parsed.data.status !== existing.status) {
+      const agentId = previousAssignedTo ?? "";
+      if (agentId) emitStatusUpdate(agentId, updated);
     }
 
     return ok(updated);

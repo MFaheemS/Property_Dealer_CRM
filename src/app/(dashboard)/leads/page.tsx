@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, LayoutGrid, List } from "lucide-react";
+import { Plus, LayoutGrid, List, Download } from "lucide-react";
 import { ILead } from "@/types";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth }  from "@/hooks/useAuth";
@@ -66,6 +66,15 @@ export default function LeadsPage() {
               </button>
             ))}
           </div>
+
+          <a
+            href="/api/export"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 text-sm transition-colors"
+            title="Export CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export</span>
+          </a>
 
           <button
             onClick={openCreate}
