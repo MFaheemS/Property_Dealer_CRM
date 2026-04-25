@@ -33,7 +33,7 @@ const UserSchema = new Schema<IUserDocument>(
       type: String,
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
-      select: false, // never returned in queries by default
+      select: false,
     },
     role: {
       type: String,
@@ -48,29 +48,26 @@ const UserSchema = new Schema<IUserDocument>(
   {
     timestamps: true,
     toJSON: {
-      transform(_doc, ret) {
-        delete ret.password; // extra safety — also excluded via select:false
+      transform(_doc, ret: Record<string, unknown>) {
+        ret.password = undefined;
         return ret;
       },
     },
   }
 );
 
-// ── Pre-save: hash password only when modified ──────────────────────────────
-UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+// Hash password only when it has been modified
+UserSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
-// ── Instance method: password comparison ────────────────────────────────────
 UserSchema.methods.comparePassword = function (
   candidate: string
 ): Promise<boolean> {
   return bcrypt.compare(candidate, this.password);
 };
 
-// ── Indexes ─────────────────────────────────────────────────────────────────
 UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 

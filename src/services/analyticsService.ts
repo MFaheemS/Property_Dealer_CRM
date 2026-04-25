@@ -12,22 +12,18 @@ export async function getAnalytics(): Promise<AnalyticsSummary> {
     byPriorityRaw,
     agentStatsRaw,
     monthlyRaw,
-    recentLeads,
   ] = await Promise.all([
     Lead.countDocuments(),
 
-    // Group by status
-    Lead.aggregate([
+    Lead.aggregate<{ _id: string; count: number }>([
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]),
 
-    // Group by priority
-    Lead.aggregate([
+    Lead.aggregate<{ _id: string; count: number }>([
       { $group: { _id: "$priority", count: { $sum: 1 } } },
     ]),
 
-    // Per-agent: total leads + closed leads
-    Lead.aggregate([
+    Lead.aggregate<{ _id: string; total: number; closed: number }>([
       { $match: { assignedTo: { $ne: null } } },
       {
         $group: {
@@ -40,8 +36,7 @@ export async function getAnalytics(): Promise<AnalyticsSummary> {
       { $limit: 10 },
     ]),
 
-    // Leads per month (last 6 months)
-    Lead.aggregate([
+    Lead.aggregate<{ _id: { year: number; month: number }; count: number }>([
       {
         $match: {
           createdAt: {
@@ -51,64 +46,56 @@ export async function getAnalytics(): Promise<AnalyticsSummary> {
       },
       {
         $group: {
-          _id: {
-            year:  { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-          },
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
           count: { $sum: 1 },
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]),
-
-    // 5 most recent leads
-    Lead.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("assignedTo", "name avatar")
-      .lean(),
   ]);
 
-  // Shape status map
   const byStatus = byStatusRaw.reduce(
     (acc, { _id, count }) => ({ ...acc, [_id]: count }),
     {} as AnalyticsSummary["byStatus"]
   );
 
-  // Shape priority map
   const byPriority = byPriorityRaw.reduce(
     (acc, { _id, count }) => ({ ...acc, [_id]: count }),
     {} as AnalyticsSummary["byPriority"]
   );
 
-  // Enrich agent stats with user names
+  // Enrich agent stats with user details
   const agentIds = agentStatsRaw.map((a) => a._id);
   const agents   = await User.find({ _id: { $in: agentIds } })
     .select("name email avatar role")
     .lean();
+
   const agentMap = new Map(agents.map((a) => [a._id.toString(), a]));
 
-  const agentPerformance = agentStatsRaw
-    .map((a) => ({
-      agent: agentMap.get(a._id.toString())!,
-      total: a.total,
-      closed: a.closed,
-    }))
-    .filter((a) => a.agent); // drop if user was deleted
+  const agentPerformance: AnalyticsSummary["agentPerformance"] = agentStatsRaw
+    .map((a) => {
+      const agent = agentMap.get(a._id.toString());
+      if (!agent) return null;
+      return {
+        agent: {
+          _id:       agent._id.toString(),
+          name:      agent.name,
+          email:     agent.email,
+          role:      agent.role as "admin" | "agent",
+          avatar:    agent.avatar,
+          createdAt: agent.createdAt?.toISOString() ?? "",
+        },
+        total:  a.total,
+        closed: a.closed,
+      };
+    })
+    .filter(Boolean) as AnalyticsSummary["agentPerformance"];
 
-  // Shape monthly leads
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const monthlyLeads = monthlyRaw.map(({ _id, count }) => ({
     month: `${MONTHS[_id.month - 1]} ${_id.year}`,
     count,
   }));
 
-  return {
-    totalLeads,
-    byStatus,
-    byPriority,
-    agentPerformance,
-    monthlyLeads,
-    recentLeads: recentLeads as AnalyticsSummary["recentLeads"],
-  };
+  return { totalLeads, byStatus, byPriority, agentPerformance, monthlyLeads };
 }

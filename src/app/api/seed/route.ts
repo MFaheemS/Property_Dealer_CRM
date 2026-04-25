@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import User, { IUserDocument } from "@/models/User";
 import Lead from "@/models/Lead";
 import { SEED_USERS, SEED_LEADS } from "@/lib/seedData";
 
@@ -15,16 +15,8 @@ export async function POST() {
   // Clear existing data
   await Promise.all([User.deleteMany({}), Lead.deleteMany({})]);
 
-  // Create users (passwords are hashed via pre-save hook)
-  const users = await User.insertMany(
-    SEED_USERS.map((u) => ({ ...u })),
-    { lean: true }
-  );
-
-  // Re-fetch with hashed passwords applied (insertMany skips hooks)
-  // So create one by one to trigger the pre-save hook
-  await User.deleteMany({});
-  const createdUsers: Awaited<ReturnType<typeof User.create>>[] = [];
+  // Create users one-by-one so the pre-save bcrypt hook fires
+  const createdUsers: IUserDocument[] = [];
   for (const u of SEED_USERS) {
     createdUsers.push(await User.create(u));
   }
@@ -32,7 +24,7 @@ export async function POST() {
   const adminUser  = createdUsers.find((u) => u.role === "admin")!;
   const agentUsers = createdUsers.filter((u) => u.role === "agent");
 
-  // Create leads and assign alternately to agents
+  // Assign leads alternately to agents
   const leadsWithAgents = SEED_LEADS.map((lead, i) => ({
     ...lead,
     assignedTo: agentUsers[i % agentUsers.length]._id,

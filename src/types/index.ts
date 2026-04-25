@@ -76,6 +76,10 @@ export interface AnalyticsSummary {
   monthlyLeads: { month: string; count: number }[];
 }
 
+export interface ILeadResponse extends ILead {
+  assignedTo?: IUser | null;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
