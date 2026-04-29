@@ -8,12 +8,16 @@ export async function getAnalytics(): Promise<AnalyticsSummary> {
 
   const [
     totalLeads,
+    assignedCount,
+    unassignedCount,
     byStatusRaw,
     byPriorityRaw,
     agentStatsRaw,
     monthlyRaw,
   ] = await Promise.all([
     Lead.countDocuments(),
+    Lead.countDocuments({ assignedTo: { $ne: null } }),
+    Lead.countDocuments({ assignedTo: null }),
 
     Lead.aggregate<{ _id: string; count: number }>([
       { $group: { _id: "$status", count: { $sum: 1 } } },
@@ -97,5 +101,5 @@ export async function getAnalytics(): Promise<AnalyticsSummary> {
     count,
   }));
 
-  return { totalLeads, byStatus, byPriority, agentPerformance, monthlyLeads };
+  return { totalLeads, assignedCount, unassignedCount, byStatus, byPriority, agentPerformance, monthlyLeads };
 }

@@ -22,12 +22,3 @@ export function verifyToken(token: string): AuthUser | null {
 
 export const COOKIE_NAME_TOKEN = COOKIE_NAME;
 
-export function createAuthCookie(token: string): string {
-  const maxAge = 7 * 24 * 60 * 60;
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
-}
-
-export function clearAuthCookie(): string {
-  return `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
-}

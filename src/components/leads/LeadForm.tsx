@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
-import { X, Loader2 } from "lucide-react";
-import { ILead, PropertyInterest } from "@/types";
+import { useState, useEffect, useRef, FormEvent } from "react";
+import { X, Loader2, Search, UserCheck } from "lucide-react";
+import { ILead, PropertyInterest, LeadSource } from "@/types";
 import { api } from "@/lib/apiClient";
 import { useAgents } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const PROPERTY_TYPES: PropertyInterest[] = [
-  "Residential Plot","Commercial Plot","House",
-  "Apartment","Farm House","Shop","Office",
+  "Residential Plot","Commercial Plot","House","Apartment",
+  "Farm House","Shop","Office","Warehouse","Duplex","Penthouse","Commercial Building",
+];
+const LEAD_SOURCES: LeadSource[] = [
+  "Facebook Ads","Walk-in","Website Inquiry","Referral","Phone Call","Other",
 ];
 const STATUSES = ["new","contacted","qualified","negotiation","closed","lost"] as const;
 
@@ -30,6 +33,7 @@ export default function LeadForm({ lead, onClose, onSaved }: LeadFormProps) {
     email:            lead?.email            ?? "",
     phone:            lead?.phone            ?? "",
     propertyInterest: lead?.propertyInterest ?? "Residential Plot",
+    source:           (lead?.source ?? "Other") as LeadSource,
     budget:           lead?.budget           ?? "",
     status:           lead?.status           ?? "new",
     notes:            lead?.notes            ?? "",
@@ -41,8 +45,26 @@ export default function LeadForm({ lead, onClose, onSaved }: LeadFormProps) {
                         : "",
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState("");
+  const [agentSearch,  setAgentSearch]  = useState(() => {
+    if (typeof lead?.assignedTo === "object" && lead?.assignedTo) {
+      return (lead.assignedTo as { name: string }).name;
+    }
+    return "";
+  });
+  const [agentOpen,    setAgentOpen]    = useState(false);
+  const agentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (agentRef.current && !agentRef.current.contains(e.target as Node)) {
+        setAgentOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -126,11 +148,20 @@ export default function LeadForm({ lead, onClose, onSaved }: LeadFormProps) {
                 onChange={(e) => update("phone", e.target.value)} required />
             </Field>
 
-            <Field label="Property Interest" colSpan={2}>
+            <Field label="Property Interest">
               <select className="input-base" value={form.propertyInterest}
                 onChange={(e) => update("propertyInterest", e.target.value)}>
                 {PROPERTY_TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Lead Source">
+              <select className="input-base" value={form.source}
+                onChange={(e) => update("source", e.target.value)}>
+                {LEAD_SOURCES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             </Field>
@@ -149,23 +180,79 @@ export default function LeadForm({ lead, onClose, onSaved }: LeadFormProps) {
               </select>
             </Field>
 
-            {user?.role === "admin" && (
-              <>
-                <Field label="Assign Agent">
-                  <select className="input-base" value={form.assignedTo}
-                    onChange={(e) => update("assignedTo", e.target.value)}>
-                    <option value="">— Unassigned —</option>
-                    {agents.map((a) => (
-                      <option key={a._id} value={a._id}>{a.name}</option>
-                    ))}
-                  </select>
-                </Field>
+            {/* Follow-up date — available to all users */}
+            <Field label="Follow-up Date" colSpan={2}>
+              <input className="input-base" type="date" value={form.followUpDate}
+                onChange={(e) => update("followUpDate", e.target.value)} />
+            </Field>
 
-                <Field label="Follow-up Date">
-                  <input className="input-base" type="date" value={form.followUpDate}
-                    onChange={(e) => update("followUpDate", e.target.value)} />
-                </Field>
-              </>
+            {/* Assign agent — admin only, searchable combobox */}
+            {user?.role === "admin" && (
+              <Field label="Assign Agent" colSpan={2}>
+                <div ref={agentRef} className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <input
+                    className="input-base pl-9 pr-8"
+                    placeholder="Search agent by name…"
+                    value={agentSearch}
+                    onChange={(e) => {
+                      setAgentSearch(e.target.value);
+                      setAgentOpen(true);
+                      if (!e.target.value) update("assignedTo", "");
+                    }}
+                    onFocus={() => setAgentOpen(true)}
+                    autoComplete="off"
+                  />
+                  {form.assignedTo && (
+                    <UserCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400 pointer-events-none" />
+                  )}
+                  {agentOpen && (
+                    <div className="absolute z-20 top-full mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden">
+                      {/* Unassign option */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { update("assignedTo", ""); setAgentSearch(""); setAgentOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-slate-500 hover:bg-slate-800/60 transition-colors border-b border-slate-800"
+                      >
+                        — Unassigned —
+                      </button>
+                      {agents
+                        .filter((a) => a.name.toLowerCase().includes(agentSearch.toLowerCase()))
+                        .map((a) => (
+                          <button
+                            key={a._id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              update("assignedTo", a._id);
+                              setAgentSearch(a.name);
+                              setAgentOpen(false);
+                            }}
+                            className={cn(
+                              "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2",
+                              form.assignedTo === a._id
+                                ? "bg-yellow-400/10 text-yellow-400"
+                                : "text-slate-300 hover:bg-slate-800/60"
+                            )}
+                          >
+                            <span className="w-6 h-6 rounded-md bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 flex-shrink-0">
+                              {a.name[0].toUpperCase()}
+                            </span>
+                            {a.name}
+                            {form.assignedTo === a._id && (
+                              <UserCheck className="w-3.5 h-3.5 ml-auto text-emerald-400" />
+                            )}
+                          </button>
+                        ))
+                      }
+                      {agents.filter((a) => a.name.toLowerCase().includes(agentSearch.toLowerCase())).length === 0 && (
+                        <p className="px-4 py-3 text-sm text-slate-500">No agents found</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Field>
             )}
 
             <Field label="Notes" colSpan={2}>

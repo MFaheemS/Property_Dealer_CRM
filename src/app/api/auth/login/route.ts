@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { login } from "@/services/authService";
-import { createAuthCookie } from "@/lib/auth";
 
 const LoginSchema = z.object({
   email:    z.email("Invalid email address"),
@@ -24,7 +23,13 @@ export async function POST(req: NextRequest) {
       { success: true, data: user, message: "Logged in successfully" },
       { status: 200 }
     );
-    response.headers.set("Set-Cookie", createAuthCookie(token));
+    response.cookies.set("propvault_token", token, {
+      httpOnly: true,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login failed";

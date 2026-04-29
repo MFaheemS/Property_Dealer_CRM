@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import Lead from "@/models/Lead";
 import { logActivity } from "./activityService";
+import { notifyAdminsNewLead, notifyAgentAssigned } from "./notificationService";
 import { Types } from "mongoose";
 
 export interface LeadFilters {
@@ -17,6 +18,7 @@ export interface CreateLeadInput {
   email: string;
   phone: string;
   propertyInterest: string;
+  source?: string;
   budget: number;
   notes?: string;
   assignedTo?: string;
@@ -30,6 +32,7 @@ export interface UpdateLeadInput {
   email?: string;
   phone?: string;
   propertyInterest?: string;
+  source?: string;
   budget?: number;
   status?: string;
   notes?: string;
@@ -133,21 +136,23 @@ export async function createLead(input: CreateLeadInput) {
     email:            input.email,
     phone:            input.phone,
     propertyInterest: input.propertyInterest,
+    source:           input.source ?? "Other",
     budget:           input.budget,
     notes:            input.notes ?? "",
-    assignedTo:       input.assignedTo
+    assignedTo:       input.createdByRole === "admin" && input.assignedTo
                         ? new Types.ObjectId(input.assignedTo)
                         : null,
     followUpDate: input.followUpDate ? new Date(input.followUpDate) : null,
   });
 
-  // Log creation
+  // Log creation + notify admins (fire-and-forget)
   await logActivity({
     leadId:      lead._id.toString(),
     action:      "lead_created",
     performedBy: input.createdById,
     meta:        { clientName: lead.name, budget: lead.budget },
   });
+  notifyAdminsNewLead(lead.name, lead.budget, lead._id.toString()).catch(() => null);
 
   return lead;
 }
@@ -168,7 +173,7 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
 
   const updatePayload: Record<string, unknown> = {};
   const fields = [
-    "name", "email", "phone", "propertyInterest",
+    "name", "email", "phone", "propertyInterest", "source",
     "budget", "status", "notes", "followUpDate",
   ] as const;
 
@@ -176,8 +181,8 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
     if (input[f] !== undefined) updatePayload[f] = input[f];
   }
 
-  // Handle assignedTo separately (allow explicit null to unassign)
-  if ("assignedTo" in input) {
+  // Only admins can assign/unassign leads
+  if ("assignedTo" in input && input.updatedByRole === "admin") {
     updatePayload.assignedTo = input.assignedTo
       ? new Types.ObjectId(input.assignedTo)
       : null;
@@ -197,7 +202,7 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
     });
   }
 
-  // Log assignment change
+  // Log assignment change + notify agent
   if (
     "assignedTo" in input &&
     input.assignedTo !== input.previousAssignedTo
@@ -208,6 +213,9 @@ export async function updateLead(id: string, input: UpdateLeadInput) {
       performedBy: input.updatedById,
       meta:        { newAgent: input.assignedTo ?? "unassigned" },
     });
+    if (input.assignedTo) {
+      notifyAgentAssigned(input.assignedTo, updated?.name ?? id, id).catch(() => null);
+    }
   }
 
   // Log note addition

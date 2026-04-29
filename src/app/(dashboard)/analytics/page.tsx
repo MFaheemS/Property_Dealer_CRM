@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { TrendingUp, Users, CheckCircle2, XCircle, Target } from "lucide-react";
+import { TrendingUp, Users, CheckCircle2, XCircle, Target, UserCheck, UserX } from "lucide-react";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { avatarUrl } from "@/lib/utils";
@@ -67,11 +67,13 @@ export default function AnalyticsPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard label="Total Leads"  value={totalLeads}  icon={<TrendingUp className="w-5 h-5 text-yellow-400" />}  accent="gold" />
-        <StatsCard label="Active Leads" value={activeLeads}  icon={<Target     className="w-5 h-5 text-blue-400" />}    accent="blue" />
-        <StatsCard label="Closed Deals" value={closedLeads}  icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} accent="emerald" sub={`${closeRate}% close rate`} />
-        <StatsCard label="Lost Leads"   value={lostLeads}    icon={<XCircle    className="w-5 h-5 text-red-400" />}     accent="red" />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatsCard label="Total Leads"   value={totalLeads}                 icon={<TrendingUp   className="w-5 h-5 text-yellow-400"  />} accent="gold"    />
+        <StatsCard label="Active Leads"  value={activeLeads}                icon={<Target       className="w-5 h-5 text-blue-400"    />} accent="blue"    />
+        <StatsCard label="Closed Deals"  value={closedLeads}                icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} accent="emerald" sub={`${closeRate}% close rate`} />
+        <StatsCard label="Lost Leads"    value={lostLeads}                  icon={<XCircle      className="w-5 h-5 text-red-400"     />} accent="red"     />
+        <StatsCard label="Assigned"      value={data.assignedCount ?? 0}    icon={<UserCheck    className="w-5 h-5 text-emerald-400" />} accent="emerald" sub="to an agent" />
+        <StatsCard label="Unassigned"    value={data.unassignedCount ?? 0}  icon={<UserX        className="w-5 h-5 text-amber-400"   />} accent="gold"    sub="awaiting assignment" />
       </div>
 
       {/* Charts row */}
@@ -188,8 +190,8 @@ export default function AnalyticsPage() {
 function AnalyticsSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="glass rounded-2xl h-28 animate-pulse" />
         ))}
       </div>

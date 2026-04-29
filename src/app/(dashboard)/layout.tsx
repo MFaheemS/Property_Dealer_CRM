@@ -8,11 +8,12 @@ import { ToastProvider } from "@/components/shared/Toast";
 import { useSocket }     from "@/hooks/useSocket";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/leads":     "Leads",
-  "/agents":    "Agents",
-  "/analytics": "Analytics",
-  "/settings":  "Settings",
+  "/dashboard":     "Dashboard",
+  "/leads":         "Leads",
+  "/notifications": "Notifications",
+  "/agents":        "Agents",
+  "/analytics":     "Analytics",
+  "/settings":      "Settings",
 };
 
 function DashboardContent({ children }: { children: React.ReactNode }) {

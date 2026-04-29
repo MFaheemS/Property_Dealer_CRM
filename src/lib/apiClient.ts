@@ -15,6 +15,7 @@ export async function apiRequest<T = unknown>(
 
   const res = await fetch(url, {
     ...rest,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...headers,

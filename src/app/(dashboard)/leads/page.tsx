@@ -16,7 +16,7 @@ export default function LeadsPage() {
   const { user }  = useAuth();
   const { toast } = useToast();
 
-  const [filters, setFilters] = useState({ search: "", status: "", priority: "" });
+  const [filters, setFilters] = useState({ search: "", status: "", priority: "", dateFrom: "", dateTo: "" });
   const [view,    setView]    = useState<"grid" | "list">("grid");
   const [showForm, setShowForm] = useState(false);
   const [editLead, setEditLead] = useState<ILead | null>(null);

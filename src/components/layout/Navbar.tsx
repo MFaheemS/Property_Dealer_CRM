@@ -1,16 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Menu, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/apiClient";
 
 interface NavbarProps {
   onMenuClick: () => void;
   title?:      string;
-  notifications?: number;
 }
 
-export default function Navbar({ onMenuClick, title = "Dashboard", notifications = 0 }: NavbarProps) {
-  const { user } = useAuth();
+export default function Navbar({ onMenuClick, title = "Dashboard" }: NavbarProps) {
+  const { user }  = useAuth();
+  const router    = useRouter();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    function fetchUnread() {
+      api.get<{ data: { unread: number } }>("/api/notifications")
+        .then((res) => setUnread(res.data.unread))
+        .catch(() => null);
+    }
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30_000); // poll every 30s
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-6 py-3 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
@@ -28,10 +44,16 @@ export default function Navbar({ onMenuClick, title = "Dashboard", notifications
       {/* Right */}
       <div className="flex items-center gap-2">
         {/* Notification bell */}
-        <button className="relative p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors">
+        <button
+          onClick={() => router.push("/notifications")}
+          className="relative p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
+          title={unread > 0 ? `${unread} unread notifications` : "Notifications"}
+        >
           <Bell className="w-5 h-5" />
-          {notifications > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-yellow-400 rounded-full" />
+          {unread > 0 && (
+            <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-yellow-400 rounded-full flex items-center justify-center text-[9px] font-bold text-slate-900">
+              {unread > 99 ? "99+" : unread}
+            </span>
           )}
         </button>
 

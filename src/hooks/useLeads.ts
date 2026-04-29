@@ -8,6 +8,8 @@ interface LeadFilters {
   status?:   string;
   priority?: string;
   search?:   string;
+  dateFrom?: string;
+  dateTo?:   string;
   page?:     number;
 }
 
@@ -31,6 +33,8 @@ export function useLeads(filters: LeadFilters = {}) {
       if (filters.status)   params.set("status",   filters.status);
       if (filters.priority) params.set("priority", filters.priority);
       if (filters.search)   params.set("search",   filters.search);
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo)   params.set("dateTo",   filters.dateTo);
       if (filters.page)     params.set("page",     String(filters.page));
 
       const res = await api.get<{ data: LeadsResponse }>(`/api/leads?${params}`);
@@ -40,7 +44,7 @@ export function useLeads(filters: LeadFilters = {}) {
     } finally {
       setLoading(false);
     }
-  }, [filters.status, filters.priority, filters.search, filters.page]); // eslint-disable-line
+  }, [filters.status, filters.priority, filters.search, filters.dateFrom, filters.dateTo, filters.page]); // eslint-disable-line
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 

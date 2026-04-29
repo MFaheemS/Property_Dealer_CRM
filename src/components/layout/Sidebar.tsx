@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2, LayoutDashboard, Users, BarChart3,
-  Settings, LogOut, X, TrendingUp,
+  Settings, LogOut, X, TrendingUp, Bell,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -17,11 +17,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard",  href: "/dashboard",  icon: <LayoutDashboard className="w-5 h-5" /> },
-  { label: "Leads",      href: "/leads",       icon: <TrendingUp className="w-5 h-5" /> },
-  { label: "Agents",     href: "/agents",      icon: <Users className="w-5 h-5" />, adminOnly: true },
-  { label: "Analytics",  href: "/analytics",   icon: <BarChart3 className="w-5 h-5" />, adminOnly: true },
-  { label: "Settings",   href: "/settings",    icon: <Settings className="w-5 h-5" /> },
+  { label: "Dashboard",     href: "/dashboard",     icon: <LayoutDashboard className="w-5 h-5" /> },
+  { label: "Leads",         href: "/leads",          icon: <TrendingUp className="w-5 h-5" /> },
+  { label: "Notifications", href: "/notifications",  icon: <Bell className="w-5 h-5" /> },
+  { label: "Agents",        href: "/agents",         icon: <Users className="w-5 h-5" />, adminOnly: true },
+  { label: "Analytics",     href: "/analytics",      icon: <BarChart3 className="w-5 h-5" />, adminOnly: true },
+  { label: "Settings",      href: "/settings",       icon: <Settings className="w-5 h-5" /> },
 ];
 
 interface SidebarProps {

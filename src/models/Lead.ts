@@ -16,6 +16,7 @@ export interface ILeadDocument extends Document {
   email: string;
   phone: string;
   propertyInterest: string;
+  source: string;
   budget: number;
   status: LeadStatus;
   priority: LeadPriority;
@@ -35,6 +36,10 @@ const PROPERTY_TYPES = [
   "Farm House",
   "Shop",
   "Office",
+  "Warehouse",
+  "Duplex",
+  "Penthouse",
+  "Commercial Building",
 ] as const;
 
 const LeadSchema = new Schema<ILeadDocument>(
@@ -61,6 +66,14 @@ const LeadSchema = new Schema<ILeadDocument>(
       type: String,
       required: [true, "Property interest is required"],
       enum: { values: PROPERTY_TYPES, message: "Invalid property type" },
+    },
+    source: {
+      type: String,
+      enum: {
+        values: ["Facebook Ads", "Walk-in", "Website Inquiry", "Referral", "Phone Call", "Other"],
+        message: "Invalid lead source",
+      },
+      default: "Other",
     },
     budget: {
       type: Number,

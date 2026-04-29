@@ -17,7 +17,19 @@ export type PropertyInterest =
   | "Apartment"
   | "Farm House"
   | "Shop"
-  | "Office";
+  | "Office"
+  | "Warehouse"
+  | "Duplex"
+  | "Penthouse"
+  | "Commercial Building";
+
+export type LeadSource =
+  | "Facebook Ads"
+  | "Walk-in"
+  | "Website Inquiry"
+  | "Referral"
+  | "Phone Call"
+  | "Other";
 
 export interface IUser {
   _id: string;
@@ -34,6 +46,7 @@ export interface ILead {
   email: string;
   phone: string;
   propertyInterest: PropertyInterest;
+  source: LeadSource;
   budget: number;
   status: LeadStatus;
   priority: LeadPriority;
@@ -65,9 +78,11 @@ export interface IFollowUp {
 }
 
 export interface AnalyticsSummary {
-  totalLeads: number;
-  byStatus: Partial<Record<LeadStatus, number>>;
-  byPriority: Partial<Record<LeadPriority, number>>;
+  totalLeads:      number;
+  assignedCount:   number;
+  unassignedCount: number;
+  byStatus:        Partial<Record<LeadStatus, number>>;
+  byPriority:      Partial<Record<LeadPriority, number>>;
   agentPerformance: {
     agent: IUser;
     total: number;

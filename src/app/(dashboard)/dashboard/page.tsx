@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   TrendingUp, Users, CheckCircle2, Clock,
-  Plus, AlertTriangle, ArrowRight,
+  Plus, AlertTriangle, ArrowRight, TimerOff,
 } from "lucide-react";
 import { useAuth }    from "@/hooks/useAuth";
 import { api }        from "@/lib/apiClient";
@@ -17,6 +17,7 @@ interface DashSummary {
   newCount: number;
   closed:   number;
   overdue:  number;
+  stale:    number;
   recent:   ILead[];
 }
 
@@ -30,11 +31,17 @@ export default function DashboardPage() {
       try {
         const res   = await api.get<{ data: { leads: ILead[]; total: number } }>("/api/leads?limit=10");
         const leads = res.data.leads;
+        const sevenDaysAgo = Date.now() - 7 * 86_400_000;
         setStats({
           total:    res.data.total,
           newCount: leads.filter((l) => l.status === "new").length,
           closed:   leads.filter((l) => l.status === "closed").length,
           overdue:  leads.filter((l) => isOverdue(l.followUpDate)).length,
+          stale:    leads.filter((l) =>
+            ["new", "contacted"].includes(l.status) &&
+            !l.followUpDate &&
+            new Date(l.createdAt).getTime() < sevenDaysAgo
+          ).length,
           recent:   leads.slice(0, 6),
         });
       } finally {
@@ -67,15 +74,16 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <div key={i} className="glass rounded-2xl h-28 animate-pulse" />)
+          Array.from({ length: 5 }).map((_, i) => <div key={i} className="glass rounded-2xl h-28 animate-pulse" />)
         ) : (
           <>
-            <StatsCard label="Total Leads"   value={stats?.total    ?? 0} icon={<TrendingUp   className="w-5 h-5 text-yellow-400" />} accent="gold"    />
-            <StatsCard label="New This Week" value={stats?.newCount  ?? 0} icon={<Clock        className="w-5 h-5 text-blue-400" />}   accent="blue"    />
-            <StatsCard label="Deals Closed"  value={stats?.closed    ?? 0} icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} accent="emerald" />
-            <StatsCard label="Overdue"        value={stats?.overdue   ?? 0} icon={<AlertTriangle className="w-5 h-5 text-red-400" />}    accent="red"     sub="follow-ups" />
+            <StatsCard label="Total Leads"   value={stats?.total    ?? 0} icon={<TrendingUp    className="w-5 h-5 text-yellow-400"  />} accent="gold"    />
+            <StatsCard label="New"           value={stats?.newCount  ?? 0} icon={<Clock         className="w-5 h-5 text-blue-400"    />} accent="blue"    />
+            <StatsCard label="Deals Closed"  value={stats?.closed    ?? 0} icon={<CheckCircle2  className="w-5 h-5 text-emerald-400" />} accent="emerald" />
+            <StatsCard label="Overdue"       value={stats?.overdue   ?? 0} icon={<AlertTriangle  className="w-5 h-5 text-red-400"    />} accent="red"     sub="follow-ups" />
+            <StatsCard label="Stale"         value={stats?.stale     ?? 0} icon={<TimerOff       className="w-5 h-5 text-orange-400" />} accent="red"     sub="no follow-up 7d+" />
           </>
         )}
       </div>

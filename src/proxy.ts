@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken, COOKIE_NAME_TOKEN } from "@/lib/auth";
+import { jwtVerify } from "jose";
 
-// Paths that never require authentication
+const COOKIE_NAME = "propvault_token";
+
 const PUBLIC_PATHS = [
   "/login",
   "/signup",
@@ -10,7 +11,6 @@ const PUBLIC_PATHS = [
   "/api/seed",
 ];
 
-// Paths that require admin role
 const ADMIN_ONLY_PATHS = [
   "/agents",
   "/api/agents",
@@ -18,15 +18,13 @@ const ADMIN_ONLY_PATHS = [
   "/api/analytics",
 ];
 
-export function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Skip static assets
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -35,7 +33,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(COOKIE_NAME_TOKEN)?.value;
+  const token = request.cookies.get(COOKIE_NAME)?.value;
 
   if (!token) {
     return pathname.startsWith("/api/")
@@ -43,31 +41,32 @@ export function middleware(request: NextRequest) {
       : NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const user = verifyToken(token);
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
 
-  if (!user) {
+    const user = payload as { id: string; role: string; name: string };
+
+    if (ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p)) && user.role !== "admin") {
+      return pathname.startsWith("/api/")
+        ? NextResponse.json({ success: false, error: "Forbidden — admin only" }, { status: 403 })
+        : NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    const headers = new Headers(request.headers);
+    headers.set("x-user-id",   user.id);
+    headers.set("x-user-role", user.role);
+    headers.set("x-user-name", user.name);
+
+    return NextResponse.next({ request: { headers } });
+  } catch {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ success: false, error: "Session expired" }, { status: 401 });
     }
     const res = NextResponse.redirect(new URL("/login", request.url));
-    res.cookies.delete(COOKIE_NAME_TOKEN);
+    res.cookies.delete(COOKIE_NAME);
     return res;
   }
-
-  // Admin-only route guard
-  if (ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p)) && user.role !== "admin") {
-    return pathname.startsWith("/api/")
-      ? NextResponse.json({ success: false, error: "Forbidden — admin only" }, { status: 403 })
-      : NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  // Inject user identity into request headers for API routes
-  const headers = new Headers(request.headers);
-  headers.set("x-user-id",   user.id);
-  headers.set("x-user-role", user.role);
-  headers.set("x-user-name", user.name);
-
-  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

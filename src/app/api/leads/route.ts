@@ -6,15 +6,19 @@ import { sendNewLeadEmail } from "@/services/emailService";
 import { emitNewLead } from "@/lib/socketEmitter";
 import { ILead } from "@/types";
 
+const PROPERTY_TYPES = ["Residential Plot","Commercial Plot","House","Apartment","Farm House","Shop","Office","Warehouse","Duplex","Penthouse","Commercial Building"] as const;
+const LEAD_SOURCES   = ["Facebook Ads","Walk-in","Website Inquiry","Referral","Phone Call","Other"] as const;
+
 const CreateLeadSchema = z.object({
   name:             z.string().min(2).max(80),
   email:            z.email(),
   phone:            z.string().min(7).max(15),
-  propertyInterest: z.enum(["Residential Plot","Commercial Plot","House","Apartment","Farm House","Shop","Office"]),
+  propertyInterest: z.enum(PROPERTY_TYPES),
+  source:           z.enum(LEAD_SOURCES).optional(),
   budget:           z.number().min(0),
-  notes:            z.string().max(2000).optional(),
-  assignedTo:       z.string().optional(),
-  followUpDate:     z.string().optional(),
+  notes:            z.string().max(2000).nullish(),
+  assignedTo:       z.string().nullish(),
+  followUpDate:     z.string().nullish(),
 });
 
 export async function GET(req: NextRequest) {
@@ -52,8 +56,12 @@ export async function POST(req: NextRequest) {
     const parsed = CreateLeadSchema.safeParse(body);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Invalid input");
 
+    const { notes, assignedTo, followUpDate, ...rest } = parsed.data;
     const lead = await createLead({
-      ...parsed.data,
+      ...rest,
+      notes:         notes        ?? undefined,
+      assignedTo:    assignedTo   ?? undefined,
+      followUpDate:  followUpDate ?? undefined,
       createdById:   user.id,
       createdByRole: user.role,
     });

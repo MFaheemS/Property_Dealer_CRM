@@ -8,16 +8,15 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import { IUser } from "@/types";
 import { api } from "@/lib/apiClient";
 
 interface AuthContextValue {
-  user:     IUser | null;
-  loading:  boolean;
-  login:    (email: string, password: string) => Promise<void>;
-  signup:   (name: string, email: string, password: string, role?: string) => Promise<void>;
-  logout:   () => Promise<void>;
+  user:    IUser | null;
+  loading: boolean;
+  login:   (email: string, password: string) => Promise<void>;
+  signup:  (name: string, email: string, password: string, role?: string) => Promise<void>;
+  logout:  () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,9 +24,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,    setUser]    = useState<IUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
-  // Fetch current user on mount
   useEffect(() => {
     api.get<{ data: IUser }>("/api/auth/me")
       .then((res) => setUser(res.data))
@@ -38,9 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.post<{ data: IUser }>("/api/auth/login", { email, password });
     setUser(res.data);
-    router.push("/dashboard");
-    router.refresh();
-  }, [router]);
+    // Hard redirect so the httpOnly cookie is included on the next request
+    window.location.href = "/dashboard";
+  }, []);
 
   const signup = useCallback(
     async (name: string, email: string, password: string, role = "agent") => {
@@ -48,18 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name, email, password, role,
       });
       setUser(res.data);
-      router.push("/dashboard");
-      router.refresh();
+      window.location.href = "/dashboard";
     },
-    [router]
+    []
   );
 
   const logout = useCallback(async () => {
     await api.post("/api/auth/logout", {});
     setUser(null);
-    router.push("/login");
-    router.refresh();
-  }, [router]);
+    window.location.href = "/login";
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
