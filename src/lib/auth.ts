@@ -1,20 +1,19 @@
 import jwt from "jsonwebtoken";
 import { AuthUser } from "@/types";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
 const COOKIE_NAME = "propvault_token";
 
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not defined in environment variables");
-}
-
 export function signToken(payload: AuthUser): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is not defined");
+  return jwt.sign(payload, secret, { expiresIn: "7d" });
 }
 
 export function verifyToken(token: string): AuthUser | null {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return null;
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthUser;
+    return jwt.verify(token, secret) as AuthUser;
   } catch {
     return null;
   }
