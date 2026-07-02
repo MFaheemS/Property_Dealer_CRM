@@ -23,13 +23,13 @@
 
 ## Features
 
-### Authentication (15 marks)
+### Authentication 
 - Signup & Login with bcrypt password hashing
 - JWT stored in httpOnly cookie (7-day expiry)
 - Edge middleware for route protection
 - Admin/Agent role-based access control
 
-### Lead Management (15 marks)
+### Lead Management
 - Create, view, update, delete leads
 - Admin sees all leads; agents see only assigned leads
 - Property listing card UI (not plain table rows)
@@ -37,44 +37,44 @@
 - Grid and list view toggle
 - Search + status + priority filters
 
-### Lead Scoring (10 marks)
+### Lead Scoring 
 - Auto-computed from budget via Mongoose pre-save hook
 - Budget ≥ 20M → High priority, score 90
 - Budget 10M–20M → Medium priority, score 60–75
 - Budget < 10M → Low priority, score 20–40
 - Visual score bar on every lead card
 
-### Real-Time (10 marks)
+### Real-Time 
 - Socket.io custom server (port 3001)
 - Toast notifications for: new lead, lead assigned, status change
 - No page refresh needed
 - Falls back silently when socket server is not running
 
-### WhatsApp + Email (10 marks)
+### WhatsApp + Email
 - Click-to-chat WhatsApp links (Pakistani number formatting)
 - Email on new lead creation (to admin)
 - Email on lead assignment (to agent)
 - Styled HTML email templates
 
-### Activity Timeline (10 marks)
+### Activity Timeline 
 - Every lead mutation is logged to ActivityLog collection
 - Chronological timeline UI on lead detail page
 - Tracks: created, updated, assigned, status changed, note added, follow-up set
 
-### Smart Follow-ups (10 marks)
+### Smart Follow-ups 
 - Agents schedule follow-up reminders per lead
 - Overdue detection (scheduledAt < now, isDone = false)
 - Dashboard highlights overdue count
 - Mark done with one click
 
-### Analytics Dashboard (10 marks)
+### Analytics Dashboard 
 - Total leads, active leads, closed deals, overdue count
 - Monthly lead trend (bar chart)
 - Priority distribution (pie chart)
 - Status distribution (horizontal bar chart)
 - Agent performance table with close rate and progress bar
 
-### Bonus Features (+10)
+### Bonus Features 
 - AI follow-up suggestion engine (rule-based, per lead context)
 - CSV export (all leads for admin, own leads for agent)
 
